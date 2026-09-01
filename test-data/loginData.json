@@ -1,0 +1,8 @@
+{
+  "adminLogin": {
+    "loginPath": "/site/login",
+    "expectedUrlPattern": "/admin/",
+    "demoBtnName": "Admin",
+    "signInBtnName": "Sign In"
+  }
+}
