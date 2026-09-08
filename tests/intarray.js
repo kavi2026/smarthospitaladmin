@@ -20,3 +20,4 @@ function findMaxConsecutiveOnes(nums) {
 
 const input = [0, 1, 1, 0, 3, 4, 5, 1, 1, 1];
 console.log(findMaxConsecutiveOnes(input)); // Output: 3
+//test updated
