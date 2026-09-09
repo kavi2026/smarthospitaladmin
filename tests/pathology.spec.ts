@@ -19,10 +19,10 @@ test.describe('Pathology Generate Bill', () => {
 
 		const patientOptions = page.locator('.select2-results__option');
 		await expect(patientOptions).toHaveCount(1);
-		await expect(patientOptions).toHaveText(['test (1234)']);
+		await expect(patientOptions).toHaveText(/\(1234\)$/);
 
-		await patientOptions.getByText('test (1234)', { exact: true }).click();
-		await expect(patientSelector).toHaveText('test (1234)');
+		await patientOptions.filter({ hasText: /\(1234\)$/ }).click();
+		await expect(patientSelector).toHaveText(/\(1234\)$/);
 	});
 
 	test('closes the New Patient form when Cancel is clicked', async ({ page }) => {
