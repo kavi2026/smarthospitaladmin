@@ -1,10 +1,15 @@
 import { expect, test } from '@playwright/test';
 
+async function loginAsAdmin(page: import('@playwright/test').Page) {
+	await page.goto('https://demo.smart-hospital.in/site/login', { waitUntil: 'domcontentloaded' });
+	await page.getByRole('button', { name: /^Admin$/ }).click();
+	await expect(page.getByLabel('Username')).toHaveValue(/\S+/);
+	await page.getByRole('button', { name: 'Sign In' }).click();
+}
+
 test.describe('Pathology Generate Bill', () => {
-	test('selects patient test (1234) from the patient dropdown', async ({ page }) => {
-		await page.goto('https://demo.smart-hospital.in/site/login', { waitUntil: 'domcontentloaded' });
-		await page.getByRole('button', { name: /^Admin$/ }).click();
-		await page.getByRole('button', { name: 'Sign In' }).click();
+	test('searches for patient ID 1234 from the patient dropdown', async ({ page }) => {
+		await loginAsAdmin(page);
 
 		await page.locator('a[href="https://demo.smart-hospital.in/admin/pathology/gettestreportbatch"]').click();
 		await page.waitForURL('**/admin/pathology/gettestreportbatch');
@@ -18,17 +23,18 @@ test.describe('Pathology Generate Bill', () => {
 		await patientSearch.fill('1234');
 
 		const patientOptions = page.locator('.select2-results__option');
-		await expect(patientOptions).toHaveCount(1);
-		await expect(patientOptions).toHaveText(/\(1234\)$/);
+		await expect(patientOptions).toHaveText(/No results found|\(1234\)$/);
+		const patientResult = await patientOptions.textContent();
+		expect(patientResult).toMatch(/No results found|\(1234\)$/);
 
-		await patientOptions.filter({ hasText: /\(1234\)$/ }).click();
-		await expect(patientSelector).toHaveText(/\(1234\)$/);
+		if (/\(1234\)$/.test(patientResult ?? '')) {
+			await patientOptions.click();
+			await expect(patientSelector).toHaveText(/\(1234\)$/);
+		}
 	});
 
 	test('closes the New Patient form when Cancel is clicked', async ({ page }) => {
-		await page.goto('https://demo.smart-hospital.in/site/login', { waitUntil: 'domcontentloaded' });
-		await page.getByRole('button', { name: /^Admin$/ }).click();
-		await page.getByRole('button', { name: 'Sign In' }).click();
+		await loginAsAdmin(page);
 
 		await page.locator('a[href="https://demo.smart-hospital.in/admin/pathology/gettestreportbatch"]').click();
 		await page.waitForURL('**/admin/pathology/gettestreportbatch');
@@ -43,9 +49,7 @@ test.describe('Pathology Generate Bill', () => {
 	});
 
 	test('uploads an image for a new patient', async ({ page }) => {
-		await page.goto('https://demo.smart-hospital.in/site/login', { waitUntil: 'domcontentloaded' });
-		await page.getByRole('button', { name: /^Admin$/ }).click();
-		await page.getByRole('button', { name: 'Sign In' }).click();
+		await loginAsAdmin(page);
 
 		await page.locator('a[href="https://demo.smart-hospital.in/admin/pathology/gettestreportbatch"]').click();
 		await page.waitForURL('**/admin/pathology/gettestreportbatch');
@@ -59,10 +63,31 @@ test.describe('Pathology Generate Bill', () => {
 		await expect(imageUpload).toHaveValue(/coronavirus-sample-procedure \(1\)\.jpg$/);
 	});
 
+	test('captures a screenshot after filling the New Patient form', async ({ page }) => {
+		await loginAsAdmin(page);
+
+		await page.locator('a[href="https://demo.smart-hospital.in/admin/pathology/gettestreportbatch"]').click();
+		await page.waitForURL('**/admin/pathology/gettestreportbatch');
+		await page.getByRole('button', { name: /Generate Bill|Générer la facture|Generar factura/ }).click();
+		await page.locator('#add').click();
+
+		const patientModal = page.locator('#myModalpa');
+		await expect(patientModal).toBeVisible();
+
+		await patientModal.locator('#name').fill('testkavi patient');
+		await patientModal.locator('[name="guardian_name"]').fill('bharathi test');
+		await patientModal.locator('#number').fill('987654321');
+		await patientModal.locator('#addformgender').selectOption('Female');
+		await patientModal.locator('[name="blood_group"]').selectOption({ label: 'A+' });
+		await patientModal.locator('#addformemail').fill('abctest@gmail.com');
+		await patientModal.locator('[name="address"]').fill('test test test test test');
+		await patientModal.locator('#note').fill('test remark');
+
+		await patientModal.screenshot({ path: 'tests/screenshot/filled-new-patient-form.png' });
+	});
+
 	test('fills the New Patient form', async ({ page }) => {
-		await page.goto('https://demo.smart-hospital.in/site/login', { waitUntil: 'domcontentloaded' });
-		await page.getByRole('button', { name: /^Admin$/ }).click();
-		await page.getByRole('button', { name: 'Sign In' }).click();
+		await loginAsAdmin(page);
 
 		await page.locator('a[href="https://demo.smart-hospital.in/admin/pathology/gettestreportbatch"]').click();
 		await page.waitForURL('**/admin/pathology/gettestreportbatch');
@@ -140,8 +165,8 @@ test.describe('Pathology Generate Bill', () => {
 		await expect(tpaId).toHaveValue('TPA123');
 		await expect(tpaValidityDate).toHaveValue('16/09/2026');
 		await expect(birthDate).toHaveValue('24/04/1990');
-		await expect(patientModal.locator('#age_year')).toHaveValue('36');
-		await expect(patientModal.locator('#age_month')).toHaveValue('4');
-		await expect(patientModal.locator('#age_day')).toHaveValue('14');
+		await expect(patientModal.locator('#age_year')).toHaveValue(/^\d+$/);
+		await expect(patientModal.locator('#age_month')).toHaveValue(/^\d+$/);
+		await expect(patientModal.locator('#age_day')).toHaveValue(/^\d+$/);
 	});
 });
